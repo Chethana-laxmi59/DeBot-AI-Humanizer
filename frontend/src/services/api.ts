@@ -1,6 +1,9 @@
 import type { HealthResponse, ModeInfo, RewriteResponse, SamplePreset, WritingMode, LanguageOption, User, AuthResponse, SavedCloudDraft } from '../types';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+const rawBase = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+const API_BASE = rawBase && !rawBase.startsWith('http://') && !rawBase.startsWith('https://')
+  ? `https://${rawBase}`
+  : rawBase;
 
 export class ApiError extends Error {
   status: number;

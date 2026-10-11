@@ -1,6 +1,8 @@
-import { Sparkles, ShieldCheck, History, Globe, Cpu, Languages } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Sparkles, ShieldCheck, History, Globe, Cpu, Languages, User as UserIcon, LogOut, ChevronDown, Database } from 'lucide-react';
 import type { LanguageOption, HealthResponse } from '../types';
 import { type UiLanguage, UI_LANGUAGES, t } from '../utils/i18n';
+import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   health: HealthResponse | null;
@@ -25,6 +27,20 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPrivacy,
   historyCount,
 }) => {
+  const { user, isAuthenticated, logout, openAuthModal } = useAuth();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 glass-panel">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -145,6 +161,63 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <ShieldCheck className="w-4 h-4 text-slate-300" />
           </button>
+
+          {/* User Authentication Status & Controls */}
+          {isAuthenticated && user ? (
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center space-x-2 pl-1.5 pr-2.5 py-1 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/10 transition group"
+              >
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-[11px] font-bold flex items-center justify-center uppercase shadow-sm">
+                  {user.username.slice(0, 2)}
+                </div>
+                <span className="text-xs font-medium text-slate-200 max-w-[90px] truncate hidden sm:inline">
+                  {user.full_name || user.username}
+                </span>
+                <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* User Dropdown Menu */}
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-64 rounded-2xl glass-panel border border-white/10 shadow-2xl bg-slate-950/95 backdrop-blur-xl p-2 z-50 animate-fadeIn">
+                  <div className="p-2.5 border-b border-white/5">
+                    <p className="text-xs font-semibold text-white truncate">
+                      {user.full_name || user.username}
+                    </p>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {user.email}
+                    </p>
+                    <div className="mt-2 flex items-center space-x-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-emerald-300 font-medium">
+                      <Database className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>{health?.database_type === 'mysql' ? 'MySQL Database Connected' : 'Persistent Database Synced'}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-1">
+                    <button
+                      onClick={() => {
+                        logout();
+                        setUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-xs text-rose-300 hover:text-white hover:bg-rose-500/20 transition font-medium"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => openAuthModal('login')}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs shadow-md shadow-blue-500/20 transition"
+            >
+              <UserIcon className="w-3.5 h-3.5" />
+              <span>Sign In</span>
+            </button>
+          )}
         </div>
       </div>
     </header>

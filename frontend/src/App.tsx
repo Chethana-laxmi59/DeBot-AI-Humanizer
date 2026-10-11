@@ -28,6 +28,9 @@ import { VerificationPanel } from './components/VerificationPanel';
 import { SetupAlert } from './components/SetupAlert';
 import { HistoryModal } from './components/HistoryModal';
 import { PrivacyModal } from './components/PrivacyModal';
+import { AuthModal } from './components/AuthModal';
+import { LoginPage } from './components/LoginPage';
+import { useAuth } from './context/AuthContext';
 
 import { AlertCircle, RotateCcw } from 'lucide-react';
 
@@ -170,6 +173,8 @@ export function App() {
     setRevisions(updated);
   };
 
+  const { isAuthenticated } = useAuth();
+
   const handleClearHistory = () => {
     clearAllRevisions();
     setRevisions([]);
@@ -178,6 +183,17 @@ export function App() {
   const scrollToWorkspace = () => {
     workspaceRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  // Require user authentication before opening the main dashboard
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        uiLanguage={uiLanguage}
+        onSelectUiLanguage={handleSelectUiLanguage}
+        health={health}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0B0F17] text-slate-100">
@@ -311,6 +327,9 @@ export function App() {
         isOpen={isPrivacyOpen}
         onClose={() => setIsPrivacyOpen(false)}
       />
+
+      {/* Authentication Modal (Sign In / Register) */}
+      <AuthModal uiLanguage={uiLanguage} />
     </div>
   );
 }

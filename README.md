@@ -32,7 +32,11 @@ DEBOT polishes clunky, robotic, or draft prose into articulate, natural writing 
 6. **Visual Diff Viewer**: Word-level LCS comparison highlighting additions in emerald and removals in rose.
 7. **Local Revision History**: Stored privately in `localStorage` with one-click restore and history clearing.
 8. **Export & Sharing**: One-click clipboard copy and downloads in both `.txt` and `.md` formats.
-9. **Privacy & Security**:
+9. **User Authentication & MySQL Database Storage**:
+   - Secure account registration and login powered by salted bcrypt password hashing and JWT access tokens.
+   - Persistent MySQL database backend storing user profiles and synchronized draft revisions with automatic SQLite failover.
+   - User profile management with interactive header avatar, credentials verification, and session sign-out.
+10. **Privacy & Security**:
    - Untrusted prompt boundary (`<untrusted_user_text>`) preventing prompt injections.
    - Zero-logging policy (`LOG_USER_TEXT=false`) ensuring user text is never saved to logs.
    - Fully protected API keys (browser never sees credentials).

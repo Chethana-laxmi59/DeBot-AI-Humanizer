@@ -66,6 +66,33 @@ export interface HealthResponse {
   has_api_key: boolean;
   allowed_modes: string[];
   has_elevenlabs_key?: boolean;
+  database_type?: string;
+}
+
+export interface User {
+  id: number;
+  email: string;
+  username: string;
+  full_name?: string | null;
+  created_at: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
+export interface SavedCloudDraft {
+  id: number;
+  user_id: number;
+  original_text: string;
+  rewritten_text: string;
+  mode: WritingMode;
+  language: string;
+  change_summary?: string | null;
+  preservation_score?: number | null;
+  created_at: string;
 }
 
 export interface LanguageOption {

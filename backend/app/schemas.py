@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 class WritingMode(str, Enum):
     STANDARD = "standard"
@@ -90,6 +90,53 @@ class TTSRequest(BaseModel):
     text: str = Field(..., max_length=2000, description="Text to synthesize")
     language: Optional[str] = Field(default="en", description="Target language code")
 
+from datetime import datetime
+
+class UserRegisterRequest(BaseModel):
+    email: str = Field(..., min_length=5, max_length=255)
+    username: str = Field(..., min_length=3, max_length=50)
+    password: str = Field(..., min_length=6, max_length=72)
+    full_name: Optional[str] = Field(default=None, max_length=255)
+
+class UserLoginRequest(BaseModel):
+    username_or_email: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=1, max_length=72)
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    username: str
+    full_name: Optional[str] = None
+    created_at: datetime
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+class SaveDraftRequest(BaseModel):
+    original_text: str = Field(..., min_length=1)
+    rewritten_text: str = Field(..., min_length=1)
+    mode: str = Field(default="standard")
+    language: str = Field(default="en")
+    change_summary: Optional[str] = None
+    preservation_score: Optional[float] = None
+
+class SavedDraftResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    original_text: str
+    rewritten_text: str
+    mode: str
+    language: str
+    change_summary: Optional[str] = None
+    preservation_score: Optional[float] = None
+    created_at: datetime
+
 class HealthResponse(BaseModel):
     status: str
     app: str
@@ -98,6 +145,7 @@ class HealthResponse(BaseModel):
     has_api_key: bool
     allowed_modes: List[str]
     has_elevenlabs_key: bool = False
+    database_type: str = "mysql"
 
 class ModeInfo(BaseModel):
     id: str

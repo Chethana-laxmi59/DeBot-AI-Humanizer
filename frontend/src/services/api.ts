@@ -1,4 +1,4 @@
-import type { HealthResponse, ModeInfo, RewriteResponse, SamplePreset, WritingMode, LanguageOption } from '../types';
+import type { HealthResponse, ModeInfo, RewriteResponse, SamplePreset, WritingMode, LanguageOption, User, AuthResponse, SavedCloudDraft } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -115,4 +115,94 @@ export async function synthesizeSpeech(text: string, language: string): Promise<
   } catch {
     return null;
   }
+}
+
+export async function registerUser(payload: {
+  email: string;
+  username: string;
+  password: string;
+  full_name?: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({ detail: 'Registration failed' }));
+  if (!res.ok) {
+    throw new ApiError(res.status, data.detail || 'Registration failed');
+  }
+  return data as AuthResponse;
+}
+
+export async function loginUser(payload: {
+  username_or_email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({ detail: 'Login failed' }));
+  if (!res.ok) {
+    throw new ApiError(res.status, data.detail || 'Login failed');
+  }
+  return data as AuthResponse;
+}
+
+export async function fetchCurrentUser(token: string): Promise<User> {
+  const res = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, 'Session expired');
+  }
+  return await res.json();
+}
+
+export async function logoutUser(): Promise<void> {
+  await fetch(`${API_BASE}/api/auth/logout`, { method: 'POST' }).catch(() => {});
+}
+
+export async function saveUserDraftToCloud(
+  draft: {
+    original_text: string;
+    rewritten_text: string;
+    mode: string;
+    language: string;
+    change_summary?: string;
+    preservation_score?: number;
+  },
+  token: string
+): Promise<SavedCloudDraft> {
+  const res = await fetch(`${API_BASE}/api/user/saved-drafts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(draft),
+  });
+  if (!res.ok) {
+    throw new ApiError(res.status, 'Failed to save draft to database');
+  }
+  return await res.json();
+}
+
+export async function fetchUserSavedDrafts(token: string): Promise<SavedCloudDraft[]> {
+  const res = await fetch(`${API_BASE}/api/user/saved-drafts`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    return [];
+  }
+  return await res.json();
+}
+
+export async function deleteUserSavedDraft(draftId: number, token: string): Promise<void> {
+  await fetch(`${API_BASE}/api/user/saved-drafts/${draftId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
 }

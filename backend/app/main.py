@@ -1,12 +1,27 @@
 import math
 import logging
-from typing import List, Dict
+from typing import List, Dict, Optional
 import httpx
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 
 from .config import settings
+from .database import (
+    get_db,
+    create_tables,
+    active_db_type,
+    UserModel,
+    SavedDraftModel,
+)
+from .auth import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    get_current_user,
+    require_current_user,
+)
 from .schemas import (
     RewriteRequest,
     RewriteResponse,
@@ -16,6 +31,12 @@ from .schemas import (
     WritingMode,
     SupportedLanguage,
     TTSRequest,
+    UserRegisterRequest,
+    UserLoginRequest,
+    UserResponse,
+    TokenResponse,
+    SaveDraftRequest,
+    SavedDraftResponse,
 )
 from .verifier import DeterministicEntityVerifier
 from .prompts import MODE_PROFILES
@@ -50,9 +71,14 @@ def calculate_reading_time_seconds(word_count: int, words_per_minute: int = 200)
         return 0
     return max(1, math.ceil((word_count / words_per_minute) * 60))
 
+@app.on_event("startup")
+def on_startup():
+    """Initialize database tables on application startup."""
+    create_tables()
+
 @app.get("/health", response_model=HealthResponse)
 def get_health() -> HealthResponse:
-    """Health check and model status inspection."""
+    """Health check, model status, and database type inspection."""
     return HealthResponse(
         status="healthy",
         app=settings.APP_NAME,
@@ -60,7 +86,8 @@ def get_health() -> HealthResponse:
         model=settings.GEMINI_MODEL,
         has_api_key=gemini_service.has_api_key(),
         allowed_modes=[m.value for m in WritingMode],
-        has_elevenlabs_key=bool(settings.ELEVENLABS_API_KEY.strip())
+        has_elevenlabs_key=bool(settings.ELEVENLABS_API_KEY.strip()),
+        database_type=active_db_type
     )
 
 @app.get("/api/modes", response_model=List[ModeInfo])
@@ -274,3 +301,128 @@ def rewrite_text(req: RewriteRequest) -> RewriteResponse:
         is_sample=False,
         model_used=ai_result.model_used or gemini_service.model_name
     )
+
+# ==============================================================================
+# User Authentication & Database Sync Routes
+# ==============================================================================
+
+@app.post("/api/auth/register", response_model=TokenResponse)
+def register_user(req: UserRegisterRequest, db: Session = Depends(get_db)):
+    """Register a new user account in MySQL/database."""
+    email_clean = req.email.strip().lower()
+    username_clean = req.username.strip().lower()
+
+    # Check for duplicate email
+    if db.query(UserModel).filter(UserModel.email == email_clean).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An account with this email address already exists."
+        )
+
+    # Check for duplicate username
+    if db.query(UserModel).filter(UserModel.username == username_clean).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This username is already taken. Please choose another."
+        )
+
+    # Create new user record
+    new_user = UserModel(
+        email=email_clean,
+        username=username_clean,
+        hashed_password=hash_password(req.password),
+        full_name=req.full_name.strip() if req.full_name else None
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    # Issue JWT token
+    token = create_access_token({"sub": new_user.email, "uid": new_user.id})
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user=UserResponse.model_validate(new_user)
+    )
+
+@app.post("/api/auth/login", response_model=TokenResponse)
+def login_user(req: UserLoginRequest, db: Session = Depends(get_db)):
+    """Authenticate existing user credentials against MySQL/database."""
+    query_str = req.username_or_email.strip().lower()
+    user = db.query(UserModel).filter(
+        (UserModel.email == query_str) | (UserModel.username == query_str)
+    ).first()
+
+    if not user or not verify_password(req.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials. Please verify your email/username and password.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = create_access_token({"sub": user.email, "uid": user.id})
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user=UserResponse.model_validate(user)
+    )
+
+@app.get("/api/auth/me", response_model=UserResponse)
+def get_authenticated_profile(current_user: UserModel = Depends(require_current_user)):
+    """Retrieve profile of currently authenticated user."""
+    return UserResponse.model_validate(current_user)
+
+@app.post("/api/auth/logout")
+def logout_user():
+    """Client-side token disposal endpoint."""
+    return {"status": "success", "message": "Logged out successfully."}
+
+@app.post("/api/user/saved-drafts", response_model=SavedDraftResponse)
+def save_user_draft(
+    req: SaveDraftRequest,
+    current_user: UserModel = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """Save a refined draft to the user's persistent MySQL storage."""
+    draft = SavedDraftModel(
+        user_id=current_user.id,
+        original_text=req.original_text,
+        rewritten_text=req.rewritten_text,
+        mode=req.mode,
+        language=req.language,
+        change_summary=req.change_summary,
+        preservation_score=req.preservation_score
+    )
+    db.add(draft)
+    db.commit()
+    db.refresh(draft)
+    return SavedDraftResponse.model_validate(draft)
+
+@app.get("/api/user/saved-drafts", response_model=List[SavedDraftResponse])
+def get_user_saved_drafts(
+    current_user: UserModel = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieve all saved drafts for the authenticated user from MySQL."""
+    drafts = db.query(SavedDraftModel).filter(
+        SavedDraftModel.user_id == current_user.id
+    ).order_by(SavedDraftModel.created_at.desc()).all()
+    return [SavedDraftResponse.model_validate(d) for d in drafts]
+
+@app.delete("/api/user/saved-drafts/{draft_id}")
+def delete_user_saved_draft(
+    draft_id: int,
+    current_user: UserModel = Depends(require_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a saved draft by ID."""
+    draft = db.query(SavedDraftModel).filter(
+        SavedDraftModel.id == draft_id,
+        SavedDraftModel.user_id == current_user.id
+    ).first()
+    if not draft:
+        raise HTTPException(status_code=404, detail="Draft not found.")
+    db.delete(draft)
+    db.commit()
+    return {"status": "success", "message": "Draft deleted."}
+

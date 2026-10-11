@@ -34,3 +34,8 @@ frontend/.env
 .idea/
 .DS_Store
 Thumbs.db
+
+# Databases & local sqlite
+*.db
+*.sqlite
+*.sqlite3

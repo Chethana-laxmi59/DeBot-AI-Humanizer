@@ -1,9 +1,47 @@
 import type { HealthResponse, ModeInfo, RewriteResponse, SamplePreset, WritingMode, LanguageOption, User, AuthResponse, SavedCloudDraft } from '../types';
 
-const rawBase = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
-const API_BASE = rawBase && !rawBase.startsWith('http://') && !rawBase.startsWith('https://')
-  ? `https://${rawBase}`
-  : rawBase;
+export function getApiBase(): string {
+  if (typeof window !== 'undefined') {
+    const custom = localStorage.getItem('debot_custom_api_base');
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, '');
+    }
+  }
+
+  const raw = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  if (raw) {
+    return raw && !raw.startsWith('http://') && !raw.startsWith('https://') ? `https://${raw}` : raw;
+  }
+
+  // Detect Capacitor native platform or mobile webview
+  const isNative = typeof window !== 'undefined' && (
+    (window as any).Capacitor?.isNativePlatform?.() ||
+    window.location.protocol === 'capacitor:' ||
+    (window.location.hostname === 'localhost' && window.location.port === '')
+  );
+
+  if (isNative) {
+    return 'https://debot-ai-humanizer.onrender.com';
+  }
+
+  return '';
+}
+
+export function setCustomApiBase(url: string): void {
+  if (typeof window !== 'undefined') {
+    if (url && url.trim()) {
+      const clean = url.trim().replace(/\/+$/, '');
+      const full = clean.startsWith('http://') || clean.startsWith('https://') ? clean : `https://${clean}`;
+      localStorage.setItem('debot_custom_api_base', full);
+    } else {
+      localStorage.removeItem('debot_custom_api_base');
+    }
+  }
+}
+
+const API_BASE = {
+  toString: () => getApiBase(),
+};
 
 export class ApiError extends Error {
   status: number;

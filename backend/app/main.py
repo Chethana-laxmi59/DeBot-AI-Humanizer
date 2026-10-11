@@ -1,3 +1,4 @@
+import os
 import math
 import logging
 from typing import List, Dict, Optional
@@ -427,4 +428,33 @@ def delete_user_saved_draft(
     db.delete(draft)
     db.commit()
     return {"status": "success", "message": "Draft deleted."}
+
+
+# ---------------------------------------------------------------------------
+# Single-Service Static Frontend Serving (All-in-One Deployment)
+# ---------------------------------------------------------------------------
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# Check potential static directory locations (Docker /app/static or local frontend/dist)
+_STATIC_CANDIDATES = [
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static"),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist"),
+]
+
+_STATIC_DIR = next((p for p in _STATIC_CANDIDATES if os.path.isdir(p) and os.path.exists(os.path.join(p, "index.html"))), None)
+
+if _STATIC_DIR:
+    _assets_dir = os.path.join(_STATIC_DIR, "assets")
+    if os.path.isdir(_assets_dir):
+        app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/") or full_path.startswith("health"):
+            raise HTTPException(status_code=404, detail="Endpoint not found")
+        file_path = os.path.join(_STATIC_DIR, full_path)
+        if full_path and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(_STATIC_DIR, "index.html"))
 

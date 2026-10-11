@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Any
 from .schemas import WritingMode, SamplePreset, ModeInfo
 
 MODES_METADATA: List[ModeInfo] = [

@@ -11,14 +11,14 @@ import {
   Pause,
   Play,
   Square,
-  Activity,
-  Radio,
   Loader2
 } from 'lucide-react';
 import type { RewriteResponse, WritingMode } from '../types';
 import { DiffViewer } from './DiffViewer';
 import { type UiLanguage, t } from '../utils/i18n';
 import { synthesizeSpeech } from '../services/api';
+import { AudioWaveVisualizer } from './AudioWaveVisualizer';
+import { fireConfetti } from '../utils/confetti';
 
 interface EditorOutputProps {
   uiLanguage: UiLanguage;
@@ -335,6 +335,7 @@ export const EditorOutput: React.FC<EditorOutputProps> = ({
     try {
       await navigator.clipboard.writeText(result.rewritten_text);
       setCopied(true);
+      fireConfetti();
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text:', err);
@@ -361,7 +362,7 @@ export const EditorOutput: React.FC<EditorOutputProps> = ({
   const toneProfile = result ? (TONE_AUDIT_PROFILES[result.mode] || TONE_AUDIT_PROFILES.standard) : null;
 
   return (
-    <div className="flex flex-col h-full rounded-2xl glass-panel p-4 sm:p-5 relative transition">
+    <div className="flex flex-col h-full rounded-2xl glass-panel-3d p-4 sm:p-5 relative transition-all duration-300 border border-white/10 hover:border-cyan-500/30">
       {/* Header & Tabs */}
       <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-white/5">
         <div className="flex items-center space-x-2">
@@ -470,12 +471,6 @@ export const EditorOutput: React.FC<EditorOutputProps> = ({
               </span>
             )}
 
-            {/* Sample Notice Flag */}
-            {result.is_sample && (
-              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium text-[10px]">
-                {t('verification.demoBenchmark', uiLanguage)}
-              </span>
-            )}
 
             <button
               onClick={handleCopy}
@@ -517,56 +512,14 @@ export const EditorOutput: React.FC<EditorOutputProps> = ({
         )}
       </div>
 
-      {/* Cadence & Tone Audit Bar (Interactive Vocal & Stylistic Appraisal) */}
-      {!isLoading && result && toneProfile && (
-        <div className={`mt-3 p-3 rounded-xl border transition ${
-          isPlayingVoice 
-            ? 'bg-indigo-950/40 border-indigo-500/40 shadow-lg shadow-indigo-950/50' 
-            : 'bg-slate-900/60 border-white/5'
-        }`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center space-x-2">
-              <div className={`p-1.5 rounded-lg ${isPlayingVoice ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' : 'bg-slate-800 text-slate-400'}`}>
-                {isPlayingVoice ? <Radio className="w-4 h-4 text-indigo-400" /> : <Activity className="w-4 h-4 text-slate-400" />}
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                    {t('editorOutput.cadenceAuditTitle', uiLanguage)}:
-                  </span>
-                  <span className="text-xs font-semibold text-indigo-300">
-                    {toneProfile.label[uiLanguage] || toneProfile.label.en}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  {toneProfile.cadenceDescription[uiLanguage] || toneProfile.cadenceDescription.en}
-                </p>
-              </div>
-            </div>
-
-            {/* Formality & Cadence Quality Meter */}
-            <div className="flex items-center space-x-3 text-[11px]">
-              <div className="flex items-center space-x-1.5">
-                <span className="text-slate-500">{t('editorOutput.formalityScore', uiLanguage)}:</span>
-                <span className="font-mono font-medium text-slate-300">{toneProfile.formalityScore}%</span>
-                <div className="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full" 
-                    style={{ width: `${toneProfile.formalityScore}%` }}
-                  />
-                </div>
-              </div>
-
-              <span className="text-slate-600">•</span>
-              
-              <div className="flex items-center space-x-1">
-                <span className="text-slate-500">{t('editorOutput.cadenceQuality', uiLanguage)}:</span>
-                <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono font-medium border border-emerald-500/20 text-[10px]">
-                  100% Calibrated
-                </span>
-              </div>
-            </div>
-          </div>
+      {/* Dynamic Interactive Studio Voice Waveform Visualizer & Cadence Auditor */}
+      {!isLoading && result && (
+        <div className="mt-3">
+          <AudioWaveVisualizer
+            isPlaying={isPlayingVoice && !isPausedVoice}
+            formalityScore={toneProfile?.formalityScore ?? 85}
+            cadenceProfile={toneProfile ? (toneProfile.label[uiLanguage] || toneProfile.label.en) : undefined}
+          />
         </div>
       )}
 

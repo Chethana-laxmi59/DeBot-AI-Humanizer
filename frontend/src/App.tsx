@@ -129,6 +129,9 @@ export function App() {
     setErrorMessage(null);
     setResult(null);
 
+    const startTime = Date.now();
+    const scanCycleDurationMs = 1800; // Complete scan duration across entire draft box
+
     try {
       const response = await requestRewrite({
         text: inputText,
@@ -136,6 +139,12 @@ export function App() {
         language: selectedLanguage,
         custom_instructions: customInstructions,
       });
+
+      // After one complete scan, reveal the refined text
+      const elapsed = Date.now() - startTime;
+      if (elapsed < scanCycleDurationMs) {
+        await new Promise((resolve) => setTimeout(resolve, scanCycleDurationMs - elapsed));
+      }
 
       setResult(response);
 

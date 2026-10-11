@@ -18,6 +18,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { type UiLanguage, UI_LANGUAGES, t } from '../utils/i18n';
 import type { HealthResponse } from '../types';
+import { Interactive3DCanvas } from './Interactive3DCanvas';
+import { Card3DTilt } from './Card3DTilt';
 
 interface LoginPageProps {
   uiLanguage: UiLanguage;
@@ -41,6 +43,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Dynamic Password Strength Meter
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return { score: 0, label: '', color: 'bg-slate-700' };
+    let score = 0;
+    if (pass.length >= 6) score += 1;
+    if (pass.length >= 10) score += 1;
+    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
+    if (/[0-9!@#$%^&*]/.test(pass)) score += 1;
+
+    if (score <= 1) return { score: 1, label: 'Weak', color: 'bg-rose-500' };
+    if (score === 2) return { score: 2, label: 'Fair', color: 'bg-amber-400' };
+    if (score === 3) return { score: 3, label: 'Good', color: 'bg-cyan-400' };
+    return { score: 4, label: 'Strong', color: 'bg-emerald-400' };
+  };
+
+  const pwdStrength = getPasswordStrength(password);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,28 +95,33 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-950 flex flex-col justify-between relative overflow-hidden text-slate-100">
-      {/* Background ambient lighting */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/15 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-indigo-600/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-500/5 rounded-full blur-[160px] pointer-events-none" />
+    <div className="min-h-screen w-full bg-[#070A10] flex flex-col justify-between relative overflow-hidden text-slate-100 cyber-grid">
+      {/* Interactive 3D Particle Constellation Canvas */}
+      <Interactive3DCanvas variant="neural" particleCount={110} />
+
+      {/* Atmospheric ambient glows */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/15 rounded-full blur-[140px] pointer-events-none animate-float" />
+      <div className="absolute bottom-0 right-1/4 w-[650px] h-[650px] bg-indigo-600/15 rounded-full blur-[150px] pointer-events-none animate-float" style={{ animationDelay: '2.5s' }} />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] bg-cyan-500/5 rounded-full blur-[180px] pointer-events-none" />
 
       {/* Top Navbar */}
-      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between relative z-10">
-        <div className="flex items-center space-x-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-[1px] shadow-lg shadow-blue-500/20">
-            <div className="h-full w-full bg-slate-950 rounded-[11px] flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-cyan-400" />
+      <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between relative z-20">
+        <div className="flex items-center space-x-3 group cursor-pointer">
+          <div className="h-11 w-11 rounded-2xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 p-[1.5px] shadow-lg shadow-cyan-500/25 transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
+            <div className="h-full w-full bg-slate-950 rounded-[14px] flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-cyan-400 group-hover:text-cyan-300 transition" />
             </div>
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-xl tracking-tight text-white font-mono">DEBOT</span>
-              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              <span className="font-extrabold text-2xl tracking-tight text-white font-mono bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent">
+                DEBOT
+              </span>
+              <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
                 v1.0.0
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">
+            <p className="text-[11px] text-slate-400 hidden sm:block font-medium">
               {t('nav.brandSubtitle', uiLanguage)}
             </p>
           </div>
@@ -105,8 +129,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         {/* Language selector & DB badge */}
         <div className="flex items-center space-x-3">
-          <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-white/5 text-xs text-emerald-300 font-medium">
-            <Database className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-emerald-500/30 text-xs text-emerald-300 font-medium shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+            <Database className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
             <span>
               {health?.database_type === 'mysql' 
                 ? t('login.dbActive', uiLanguage) 
@@ -114,7 +138,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-slate-300">
+          <div className="flex items-center space-x-1.5 bg-slate-900/90 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-300 backdrop-blur-md hover:border-cyan-500/40 transition">
             <Languages className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
             <select
               value={uiLanguage}
@@ -132,232 +156,267 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       </header>
 
       {/* Main Login / Register Body */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row items-center justify-center gap-12 relative z-10 w-full">
-        {/* Left column: Product introduction */}
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col lg:flex-row items-center justify-center gap-12 relative z-20 w-full">
+        {/* Left column: Product introduction with 3D tilt cards */}
         <div className="flex-1 max-w-xl text-center lg:text-left space-y-6">
-          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+          <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-xs text-cyan-300 font-medium shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+            <ShieldCheck className="w-4 h-4 text-cyan-400 animate-pulse" />
             <span>{t('login.tagline', uiLanguage)}</span>
           </div>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
             {t('login.heroTitle', uiLanguage)}{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-300 bg-clip-text text-transparent animate-gradient">
               {t('login.heroHighlight', uiLanguage)}
             </span>
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-lg mx-auto lg:mx-0">
+          <p className="text-sm sm:text-base text-slate-300/90 leading-relaxed max-w-lg mx-auto lg:mx-0">
             {t('login.heroDesc', uiLanguage)}
           </p>
 
-          {/* Feature Highlights Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-left">
-            <div className="p-3 rounded-2xl glass-panel border border-white/5 space-y-1 bg-slate-900/40">
-              <div className="h-7 w-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
-                <Cpu className="w-4 h-4" />
+          {/* Interactive 3D Tilt Feature Highlights */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-2 text-left">
+            <Card3DTilt maxTilt={10} glowColor="rgba(59, 130, 246, 0.2)">
+              <div className="p-3.5 rounded-2xl glass-panel-elevated border border-blue-500/20 space-y-1.5 bg-slate-900/60 h-full hover:border-blue-500/50 transition">
+                <div className="h-8 w-8 rounded-xl bg-blue-500/15 flex items-center justify-center text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.3)]">
+                  <Cpu className="w-4 h-4" />
+                </div>
+                <h4 className="text-xs font-semibold text-slate-100">{t('login.featModesTitle', uiLanguage)}</h4>
+                <p className="text-[11px] text-slate-400 leading-snug">{t('login.featModesDesc', uiLanguage)}</p>
               </div>
-              <h4 className="text-xs font-semibold text-slate-200">{t('login.featModesTitle', uiLanguage)}</h4>
-              <p className="text-[11px] text-slate-400">{t('login.featModesDesc', uiLanguage)}</p>
-            </div>
+            </Card3DTilt>
 
-            <div className="p-3 rounded-2xl glass-panel border border-white/5 space-y-1 bg-slate-900/40">
-              <div className="h-7 w-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                <ShieldCheck className="w-4 h-4" />
+            <Card3DTilt maxTilt={10} glowColor="rgba(16, 185, 129, 0.2)">
+              <div className="p-3.5 rounded-2xl glass-panel-elevated border border-emerald-500/20 space-y-1.5 bg-slate-900/60 h-full hover:border-emerald-500/50 transition">
+                <div className="h-8 w-8 rounded-xl bg-emerald-500/15 flex items-center justify-center text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <h4 className="text-xs font-semibold text-slate-100">{t('login.featVerifierTitle', uiLanguage)}</h4>
+                <p className="text-[11px] text-slate-400 leading-snug">{t('login.featVerifierDesc', uiLanguage)}</p>
               </div>
-              <h4 className="text-xs font-semibold text-slate-200">{t('login.featVerifierTitle', uiLanguage)}</h4>
-              <p className="text-[11px] text-slate-400">{t('login.featVerifierDesc', uiLanguage)}</p>
-            </div>
+            </Card3DTilt>
 
-            <div className="p-3 rounded-2xl glass-panel border border-white/5 space-y-1 bg-slate-900/40">
-              <div className="h-7 w-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
-                <Volume2 className="w-4 h-4" />
+            <Card3DTilt maxTilt={10} glowColor="rgba(129, 140, 248, 0.2)">
+              <div className="p-3.5 rounded-2xl glass-panel-elevated border border-indigo-500/20 space-y-1.5 bg-slate-900/60 h-full hover:border-indigo-500/50 transition">
+                <div className="h-8 w-8 rounded-xl bg-indigo-500/15 flex items-center justify-center text-indigo-400 shadow-[0_0_10px_rgba(99,102,241,0.3)]">
+                  <Volume2 className="w-4 h-4" />
+                </div>
+                <h4 className="text-xs font-semibold text-slate-100">{t('login.featVoiceTitle', uiLanguage)}</h4>
+                <p className="text-[11px] text-slate-400 leading-snug">{t('login.featVoiceDesc', uiLanguage)}</p>
               </div>
-              <h4 className="text-xs font-semibold text-slate-200">{t('login.featVoiceTitle', uiLanguage)}</h4>
-              <p className="text-[11px] text-slate-400">{t('login.featVoiceDesc', uiLanguage)}</p>
-            </div>
+            </Card3DTilt>
           </div>
         </div>
 
-        {/* Right column: Auth Card */}
+        {/* Right column: 3D Interactive Tilt Auth Card */}
         <div className="w-full max-w-md">
-          <div className="relative overflow-hidden rounded-3xl glass-panel border border-white/10 shadow-2xl bg-gradient-to-b from-slate-900/90 via-slate-900/80 to-slate-950/95 p-6 sm:p-8">
-            {/* Header Tabs */}
-            <div className="flex p-1 rounded-2xl bg-slate-950/80 border border-white/5 text-xs font-medium mb-6">
-              <button
-                type="button"
-                onClick={() => { setMode('login'); setErrorMsg(null); }}
-                className={`flex-1 py-2.5 rounded-xl transition ${
-                  mode === 'login'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-semibold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {t('login.tabSignIn', uiLanguage)}
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMode('register'); setErrorMsg(null); }}
-                className={`flex-1 py-2.5 rounded-xl transition ${
-                  mode === 'register'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 font-semibold'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {t('login.tabCreateAccount', uiLanguage)}
-              </button>
-            </div>
-
-            {/* Error banner */}
-            {errorMsg && (
-              <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start space-x-2 text-xs text-rose-300 animate-fadeIn">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === 'register' && (
-                <>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      {t('login.labelFullName', uiLanguage)}
-                    </label>
-                    <div className="relative">
-                      <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                      <input
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder={t('login.placeholderFullName', uiLanguage)}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      {t('login.labelUsername', uiLanguage)} <span className="text-rose-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                      <input
-                        type="text"
-                        required
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder={t('login.placeholderUsername', uiLanguage)}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                      {t('login.labelEmail', uiLanguage)} <span className="text-rose-400">*</span>
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder={t('login.placeholderEmail', uiLanguage)}
-                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {mode === 'login' && (
-                <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                    {t('login.labelEmailOrUser', uiLanguage)} <span className="text-rose-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                    <input
-                      type="text"
-                      required
-                      value={emailOrUser}
-                      onChange={(e) => setEmailOrUser(e.target.value)}
-                      placeholder={t('login.placeholderEmailOrUser', uiLanguage)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  {t('login.labelPassword', uiLanguage)} <span className="text-rose-400">*</span>
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                {mode === 'register' && (
-                  <p className="text-[11px] text-slate-500 mt-1">{t('login.passwordHint', uiLanguage)}</p>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white text-xs font-semibold shadow-lg shadow-blue-500/25 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 group"
-              >
-                {isLoading ? (
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <span>{mode === 'login' ? t('login.btnSignIn', uiLanguage) : t('login.btnCreateAccount', uiLanguage)}</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Quick Demo Pre-fill for Sir/Judge Evaluation */}
-            {mode === 'login' && (
-              <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+          <Card3DTilt maxTilt={8} glowColor="rgba(6, 182, 212, 0.25)">
+            <div className="relative overflow-hidden rounded-3xl glass-panel-3d border border-white/15 p-6 sm:p-8 backdrop-blur-2xl">
+              {/* Header Tabs */}
+              <div className="flex p-1 rounded-2xl bg-slate-950/80 border border-white/10 text-xs font-medium mb-6 shadow-inner">
                 <button
                   type="button"
-                  onClick={handleQuickDemoFill}
-                  className="inline-flex items-center space-x-1.5 text-[11px] text-blue-400 hover:text-blue-300 font-medium transition"
+                  onClick={() => { setMode('login'); setErrorMsg(null); }}
+                  className={`flex-1 py-2.5 rounded-xl transition duration-200 ${
+                    mode === 'login'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-cyan-500/25 font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
                 >
-                  <KeyRound className="w-3 h-3" />
-                  <span>{t('login.quickDemoFill', uiLanguage)}</span>
+                  {t('login.tabSignIn', uiLanguage)}
                 </button>
-                <span className="text-[10px] text-slate-500 font-mono">chethana / chethana123</span>
+                <button
+                  type="button"
+                  onClick={() => { setMode('register'); setErrorMsg(null); }}
+                  className={`flex-1 py-2.5 rounded-xl transition duration-200 ${
+                    mode === 'register'
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-cyan-500/25 font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  {t('login.tabCreateAccount', uiLanguage)}
+                </button>
               </div>
-            )}
-          </div>
+
+              {/* Error banner */}
+              {errorMsg && (
+                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start space-x-2 text-xs text-rose-300 animate-fadeIn shadow-[0_0_15px_rgba(244,63,94,0.15)]">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === 'register' && (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                        {t('login.labelFullName', uiLanguage)}
+                      </label>
+                      <div className="relative group">
+                        <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 group-focus-within:text-cyan-400 transition" />
+                        <input
+                          type="text"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder={t('login.placeholderFullName', uiLanguage)}
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                        {t('login.labelUsername', uiLanguage)} <span className="text-rose-400">*</span>
+                      </label>
+                      <div className="relative group">
+                        <UserIcon className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 group-focus-within:text-cyan-400 transition" />
+                        <input
+                          type="text"
+                          required
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder={t('login.placeholderUsername', uiLanguage)}
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                        {t('login.labelEmail', uiLanguage)} <span className="text-rose-400">*</span>
+                      </label>
+                      <div className="relative group">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 group-focus-within:text-cyan-400 transition" />
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder={t('login.placeholderEmail', uiLanguage)}
+                          className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {mode === 'login' && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                      {t('login.labelEmailOrUser', uiLanguage)} <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="relative group">
+                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 group-focus-within:text-cyan-400 transition" />
+                      <input
+                        type="text"
+                        required
+                        value={emailOrUser}
+                        onChange={(e) => setEmailOrUser(e.target.value)}
+                        placeholder={t('login.placeholderEmailOrUser', uiLanguage)}
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                    {t('login.labelPassword', uiLanguage)} <span className="text-rose-400">*</span>
+                  </label>
+                  <div className="relative group">
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 group-focus-within:text-cyan-400 transition" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-950/80 border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-3 text-slate-400 hover:text-white transition"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Interactive Password Strength Indicator */}
+                  {mode === 'register' && password && (
+                    <div className="mt-2 space-y-1 animate-fadeIn">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-400">Password Strength:</span>
+                        <span className={`font-semibold ${
+                          pwdStrength.score >= 3 ? 'text-emerald-400' : pwdStrength.score === 2 ? 'text-amber-400' : 'text-rose-400'
+                        }`}>
+                          {pwdStrength.label}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden flex gap-1">
+                        {[1, 2, 3, 4].map((step) => (
+                          <div
+                            key={step}
+                            className={`flex-1 transition-all duration-300 ${
+                              step <= pwdStrength.score ? pwdStrength.color : 'bg-slate-800'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {mode === 'register' && !password && (
+                    <p className="text-[11px] text-slate-500 mt-1">{t('login.passwordHint', uiLanguage)}</p>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white text-xs font-semibold shadow-xl shadow-cyan-500/25 transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 group glow-cyan"
+                >
+                  {isLoading ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <span>{mode === 'login' ? t('login.btnSignIn', uiLanguage) : t('login.btnCreateAccount', uiLanguage)}</span>
+                      <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Quick Demo Pre-fill for Sir/Judge Evaluation */}
+              {mode === 'login' && (
+                <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={handleQuickDemoFill}
+                    className="inline-flex items-center space-x-1.5 text-[11px] text-cyan-400 hover:text-cyan-300 font-medium transition hover:underline group"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+                    <span>{t('login.quickDemoFill', uiLanguage)}</span>
+                  </button>
+                  <span className="text-[10px] text-slate-400 font-mono bg-slate-900/80 px-2 py-0.5 rounded border border-white/5">
+                    chethana / chethana123
+                  </span>
+                </div>
+              )}
+            </div>
+          </Card3DTilt>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="w-full max-w-7xl mx-auto px-4 py-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 relative z-10 gap-2">
+      <footer className="w-full max-w-7xl mx-auto px-4 py-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 relative z-20 gap-2">
         <p>&copy; {new Date().getFullYear()} DEBOT. {t('footer.tagline', uiLanguage)}</p>
         <div className="flex items-center space-x-2 text-[11px]">
-          <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span className="text-slate-400">{t('login.dbSubtitle', uiLanguage)}</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span>
+          <span className="text-slate-300">{t('login.dbSubtitle', uiLanguage)}</span>
         </div>
       </footer>
     </div>

@@ -78,10 +78,10 @@ EDITORIAL PRINCIPLES:
 4. NO DETECTOR CLAIMS: Never claim your output is undetectable, guaranteed to pass AI detectors, or 100% human. Focus strictly on prose craftsmanship and syntactic quality.
 
 OUTPUT SPECIFICATION:
-You must return your response formatted strictly as a single JSON object matching this schema:
+You must return your response formatted strictly as a single JSON object matching this schema. Be direct, concise, and generate promptly:
 {
   "rewritten_text": "The complete rewritten and refined prose",
-  "change_summary": "A concise 1-2 sentence explanation of editorial enhancements made",
+  "change_summary": "A concise 1-sentence explanation of editorial enhancements made (maximum 20 words)",
   "preserved_details": ["Key preserved detail 1", "Key preserved detail 2"],
   "potential_meaning_changes": ["Any subtle shift in nuance or empty array if none"],
   "unsupported_additions": ["Any rhetorical additions or empty array if none"],

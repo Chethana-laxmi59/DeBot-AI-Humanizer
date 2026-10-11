@@ -104,6 +104,7 @@ class GeminiService:
             thinking_config=types.ThinkingConfig(thinking_budget=0),
             automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
             temperature=0.3,
+            max_output_tokens=1200,
         )
 
         last_error = None

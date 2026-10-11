@@ -7,9 +7,14 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mobile:build": "npm run build && npx cap sync android",
+    "mobile:open": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "lucide-react": "^1.55.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
